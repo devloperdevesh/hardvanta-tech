@@ -1,9 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { Cpu, Activity, Microchip, Box, Wifi } from "lucide-react";
+import { motion } from "framer-motion";
+import {
+  Cpu,
+  Activity,
+  Microchip,
+  Box,
+  Wifi,
+} from "lucide-react";
 
 const categories = [
   { name: "Processors", icon: Cpu },
@@ -15,105 +22,128 @@ const categories = [
 
 export default function CategoryBar() {
   const searchParams = useSearchParams();
-  const active = searchParams.get("category");
+  const pathname = usePathname();
+  const activeQuery = searchParams.get("category");
 
-  const containerRef = useRef(null);
-  const itemRefs = useRef({});
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const itemRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
 
-  // ✅ Auto center active item
+  // 🎯 Auto center
   useEffect(() => {
-    if (!active || !containerRef.current || !itemRefs.current[active]) return;
+    const activeKey = activeQuery || pathname.split("/").pop();
+
+    if (!activeKey || !containerRef.current || !itemRefs.current[activeKey]) return;
 
     const container = containerRef.current;
-    const el = itemRefs.current[active];
+    const el = itemRefs.current[activeKey]!;
 
     container.scrollTo({
       left: el.offsetLeft - container.offsetWidth / 2 + el.offsetWidth / 2,
       behavior: "smooth",
     });
-  }, [active]);
+  }, [activeQuery, pathname]);
 
   return (
-    <div className="sticky top-[64px] z-40 bg-white/95 backdrop-blur-xl border-b border-gray-200">
+    <div className="sticky top-[64px] z-50">
 
-      {/* CENTER WRAPPER */}
-      <div className="flex justify-center">
+      {/* 💎 Glass BG */}
+      <div className="absolute inset-0 backdrop-blur-2xl bg-white/60 border-b border-white/30 shadow-sm" />
 
-        {/* SCROLL CONTAINER */}
+      <div className="flex justify-center relative">
         <div
           ref={containerRef}
-          className="
-            flex items-center gap-8 px-6 py-3
-            overflow-x-auto scrollbar-hide
-            snap-x snap-mandatory
-          "
+          className="flex gap-6 px-6 py-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory"
         >
-          {categories.map((c) => {
-            const Icon = c.icon;
-            const isActive = active === c.name;
+          {categories.map(({ name, icon: Icon }) => {
+            const slug = name.toLowerCase();
+            const isActive =
+              activeQuery === name || pathname === `/category/${slug}`;
 
             return (
-              <Link
-                key={c.name}
-                href={`/?category=${c.name}`}
-                ref={(el) => (itemRefs.current[c.name] = el)}
-                className="flex flex-col items-center justify-center min-w-[90px] snap-center group"
-              >
-
-                {/* ICON */}
-                <div
-                  className={`
-                    flex items-center justify-center
-                    w-10 h-10 rounded-lg
-                    transition-all duration-300
-                    ${
-                      isActive
-                        ? "bg-gradient-to-r from-[#0f4c81] to-[#3ccf91] text-white shadow-sm"
-                        : "bg-gray-100 text-gray-600 group-hover:bg-gray-200"
-                    }
-                  `}
+              <MagneticItem key={name}>
+                <Link
+                  href={`/category/${slug}`}
+                  ref={(el) => (itemRefs.current[slug] = el)}
+                  className="relative flex flex-col items-center snap-center group"
                 >
-                  <Icon size={18} />
-                </div>
+                  {/* ICON */}
+                  <motion.div
+                    animate={{
+                      scale: isActive ? 1.2 : 1,
+                    }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                    className={`
+                      relative flex items-center justify-center
+                      w-12 h-12 rounded-xl overflow-hidden
+                      ${
+                        isActive
+                          ? "bg-gradient-to-r from-[#0f4c81] to-[#3ccf91] text-white shadow-lg"
+                          : "bg-white/70 backdrop-blur-md text-gray-600"
+                      }
+                    `}
+                  >
+                    <Icon size={20} />
 
-                {/* TEXT */}
-                <span
-                  className={`
-                    mt-1.5 text-xs font-medium text-center transition
-                    ${
-                      isActive
-                        ? "text-[#1b6ca8]"
-                        : "text-gray-600 group-hover:text-black"
-                    }
-                  `}
-                >
-                  {c.name}
-                </span>
+                    {/* 🌊 Ripple */}
+                    <span className="absolute inset-0 pointer-events-none group-active:animate-ping bg-white/30 rounded-xl" />
+                  </motion.div>
 
-                {/* UNDERLINE */}
-                <div
-                  className={`
-                    h-[2px] mt-1 rounded-full transition-all duration-300
-                    ${
-                      isActive
-                        ? "w-5 bg-[#1b6ca8]"
-                        : "w-0 group-hover:w-5 bg-gray-400"
-                    }
-                  `}
-                />
+                  {/* TEXT */}
+                  <span
+                    className={`mt-2 text-xs font-medium ${
+                      isActive ? "text-[#1b6ca8]" : "text-gray-600"
+                    }`}
+                  >
+                    {name}
+                  </span>
 
-              </Link>
+                  {/* 🎯 Glow Pulse */}
+                  {isActive && (
+                    <motion.div
+                      className="absolute -bottom-1 w-6 h-[2px] bg-[#1b6ca8] rounded-full"
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ repeat: Infinity, duration: 1.5 }}
+                    />
+                  )}
+                </Link>
+              </MagneticItem>
             );
           })}
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* LEFT FADE */}
-      <div className="pointer-events-none absolute left-0 top-0 h-full w-8 bg-gradient-to-r from-white to-transparent" />
+/* 🧲 Magnetic Component */
+function MagneticItem({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
 
-      {/* RIGHT FADE */}
-      <div className="pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-white to-transparent" />
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const el = ref.current;
+    if (!el) return;
 
+    const rect = el.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
+
+    el.style.transform = `translate(${x * 0.2}px, ${y * 0.2}px)`;
+  };
+
+  const handleLeave = () => {
+    if (ref.current) {
+      ref.current.style.transform = `translate(0px,0px)`;
+    }
+  };
+
+  return (
+    <div
+      ref={ref}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleLeave}
+      className="transition-transform duration-300"
+    >
+      {children}
     </div>
   );
 }
