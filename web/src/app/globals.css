@@ -2,68 +2,54 @@
 
 /* ================== DESIGN TOKENS ================== */
 :root {
-  /* ---------- 8px GRID SPACING ---------- */
+  /* Spacing (8px system) */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 16px;
   --space-4: 24px;
   --space-5: 32px;
   --space-6: 40px;
-  --space-7: 48px;
 
-  /* ---------- RADIUS SYSTEM ---------- */
+  /* Radius */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
-  --radius-xl: 22px;
 
-  /* ---------- COLORS (Accessible contrast) ---------- */
-  --background: #ffffff;
-  --foreground: #111827;
-
+  /* Colors */
+  --bg: #ffffff;
+  --text: #111827;
   --primary: #2563eb;
   --primary-hover: #1d4ed8;
-
-  --text-muted: #6b7280;
+  --muted: #6b7280;
   --border: #e5e7eb;
 
-  /* ---------- SHADOW SYSTEM ---------- */
+  /* Shadows */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.14);
+  --shadow-md: 0 8px 25px rgba(0, 0, 0, 0.12);
 
-  /* ---------- MOTION SYSTEM ---------- */
-  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
-  --ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
-
-  --duration-fast: 150ms;
-  --duration-medium: 250ms;
-  --duration-slow: 400ms;
+  /* Motion */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ================== DARK MODE ================== */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #f9fafb;
-    --text-muted: #9ca3af;
+    --bg: #0a0a0a;
+    --text: #f9fafb;
+    --muted: #9ca3af;
     --border: #1f2937;
   }
 }
 
 /* ================== BASE ================== */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), system-ui;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, sans-serif;
   line-height: 1.6;
-
-  transition: background var(--duration-medium) var(--ease-standard),
-    color var(--duration-medium) var(--ease-standard);
 }
 
-/* ================== SPACING UTILITIES ================== */
+/* ================== LAYOUT ================== */
 .section {
   padding: var(--space-6) var(--space-3);
 }
@@ -74,140 +60,87 @@ body {
 
 /* ================== BUTTON ================== */
 .btn {
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-
+  @apply px-4 py-2 rounded-lg text-white;
   background: var(--primary);
-  color: white;
-
-  font-size: 14px;
-  font-weight: 500;
-
-  transition: all var(--duration-medium) var(--ease-standard);
+  transition: all 0.25s var(--ease);
   box-shadow: var(--shadow-sm);
 }
 
 .btn:hover {
   background: var(--primary-hover);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
 .btn:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 
 /* ================== CARD ================== */
 .card {
   position: relative;
   padding: var(--space-4);
-
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
-
-  background: linear-gradient(145deg,
-      rgba(255, 255, 255, 0.9),
-      rgba(255, 255, 255, 0.75));
-
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(10px);
-
-  box-shadow: var(--shadow-sm);
-
-  transition:
-    transform var(--duration-medium) var(--ease-standard),
-    box-shadow var(--duration-medium) var(--ease-standard),
-    border-color var(--duration-fast) var(--ease-standard),
-    background var(--duration-medium) var(--ease-standard);
+  transition: all 0.3s var(--ease);
 }
 
-/* 🔥 Hover = Lift + Depth + Glow */
 .card:hover {
-  transform: translateY(-6px) scale(1.01);
-
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.12),
-    0 2px 8px rgba(0, 0, 0, 0.06);
-
-  border-color: rgba(37, 99, 235, 0.25);
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(37, 99, 235, 0.3);
 }
 
-/* ⚡ Active press (real feel) */
-.card:active {
-  transform: scale(0.98);
-  box-shadow: var(--shadow-sm);
-}
-
-/* ✨ Subtle shine effect (pro touch) */
+/* Shine effect */
 .card::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
-
-  background: linear-gradient(120deg,
-      transparent,
-      rgba(255, 255, 255, 0.4),
-      transparent);
-
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.4), transparent);
   opacity: 0;
-  transition: opacity var(--duration-medium) var(--ease-standard);
+  transition: opacity 0.3s;
 }
 
 .card:hover::before {
   opacity: 1;
 }
 
-/* 🌙 Dark mode perfect tuning */
+/* Dark card */
 @media (prefers-color-scheme: dark) {
   .card {
-    background: linear-gradient(145deg,
-        rgba(20, 20, 20, 0.9),
-        rgba(30, 30, 30, 0.7));
-
-    border-color: #1f2937;
-  }
-
-  .card:hover {
-    box-shadow:
-      0 10px 30px rgba(0, 0, 0, 0.6),
-      0 2px 10px rgba(0, 0, 0, 0.4);
-  }
-
-  .card::before {
-    background: linear-gradient(120deg,
-        transparent,
-        rgba(255, 255, 255, 0.08),
-        transparent);
+    background: rgba(30, 30, 30, 0.7);
   }
 }
 
 /* ================== INPUT ================== */
 .input {
-  padding: var(--space-2);
-  border-radius: var(--radius-md);
-
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--foreground);
-
-  transition: all var(--duration-fast) var(--ease-standard);
+  @apply w-full px-4 py-3 rounded-lg border outline-none;
+  border-color: var(--border);
+  background: #f9fafb;
+  transition: all 0.2s;
 }
 
 .input:focus {
-  outline: none;
   border-color: var(--primary);
-
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  background: white;
 }
 
-/* ================== TEXT SYSTEM ================== */
+/* Floating label */
+.floating-label {
+  @apply absolute left-4 top-2 text-sm text-gray-500 transition-all;
+}
+
+/* ================== TEXT ================== */
 .text-muted {
-  color: var(--text-muted);
+  color: var(--muted);
 }
 
 .heading {
   font-weight: 600;
-  letter-spacing: -0.01em;
 }
 
 /* ================== ANIMATION ================== */
@@ -224,97 +157,15 @@ body {
 }
 
 .animate-fadeUp {
-  animation: fadeUp var(--duration-medium) var(--ease-decelerate);
+  animation: fadeUp 0.4s var(--ease);
 }
 
-/* ================== CONSISTENT HOVER ================== */
-.hover-soft {
-  transition: all var(--duration-fast) var(--ease-standard);
-}
-
-.hover-soft:hover {
-  background: rgba(0, 0, 0, 0.03);
-}
-
-@media (prefers-color-scheme: dark) {
-  .hover-soft:hover {
-    background: rgba(255, 255, 255, 0.05);
-  }
-}
-
-/* SMOOTH FADE */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.4s ease forwards;
-}
-
-/* CARD STYLE */
-.card {
-  @apply bg-white p-4 rounded-xl border shadow-sm;
-}
-
-/* INPUT */
-.input {
-  @apply border px-4 py-2 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none;
-}
-
-/* BUTTON */
-.btn {
-  @apply bg-black text-white px-4 py-2 rounded-lg hover:scale-105 transition;
-}
-
-body {
-  font-family: var(--font-sans);
-}
-
-/* smooth animation */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.4s ease forwards;
-}
-
-/* scroll smooth */
+/* ================== SCROLL ================== */
 html {
   scroll-behavior: smooth;
 }
-body {
-  background: #f1f3f6;
-  font-family: system-ui, sans-serif;
-}
 
-/* smooth animations */
-* {
-  transition: all 0.2s ease;
-}
-
-/* button hover feel */
-button {
-  cursor: pointer;
-}
-
-/* scrollbar premium */
+/* Scrollbar */
 ::-webkit-scrollbar {
   height: 6px;
 }

@@ -5,127 +5,97 @@ import { Mail, Lock, User } from "lucide-react";
 import Link from "next/link";
 
 export default function SignupPage() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSignup() {
-    if (!name || !email || !password) return;
-
     setLoading(true);
-    try {
-      const res = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        window.location.href = "/login";
-      } else {
-        alert(data.message || "Signup failed");
-      }
-    } catch {
-      alert("Something went wrong");
-    }
-    setLoading(false);
+    setTimeout(() => setLoading(false), 1000);
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-[#f8fafc]">
+    <div className="min-h-screen flex items-center justify-center bg-[#f1f5f9] px-6">
 
-      {/* MAIN CONTAINER */}
-      <div className="w-full max-w-5xl grid md:grid-cols-2 bg-white rounded-3xl shadow-xl overflow-hidden">
+      <div className="w-full max-w-3xl grid md:grid-cols-2 bg-white rounded-2xl shadow-md overflow-hidden">
 
-        {/* LEFT SIDE (WELCOME PANEL) */}
-        <div className="hidden md:flex flex-col justify-center p-10 bg-gradient-to-br from-blue-600 to-indigo-600 text-white">
-          <h1 className="text-3xl font-semibold leading-tight">
-            Welcome to Hardvanta
+        {/* LEFT */}
+        <div className="hidden md:flex flex-col justify-center px-10 py-10 bg-gradient-to-br from-indigo-600 to-blue-500 text-white">
+          <h1 className="text-2xl font-semibold">
+            Hardvanta
           </h1>
-          <p className="mt-4 text-white/80">
-            Build faster. Ship smarter. Scale effortlessly.
+
+          <p className="mt-3 text-sm text-white/80 leading-relaxed">
+            Industrial electronics platform for engineers and builders.
           </p>
 
-          <div className="mt-10 space-y-4 text-sm text-white/70">
-            <p>✔ Clean developer experience</p>
-            <p>✔ Powerful tools</p>
-            <p>✔ Lightning fast performance</p>
+          <div className="mt-8 space-y-2 text-sm text-white/80">
+            <p>High performance components</p>
+            <p>Reliable sourcing</p>
+            <p>Built for scale</p>
           </div>
         </div>
 
-        {/* RIGHT SIDE (FORM) */}
-        <div className="p-8 md:p-10">
+        {/* RIGHT */}
+        <div className="flex flex-col justify-center px-8 py-10">
 
-          {/* HEADER */}
           <div className="mb-6">
-            <h2 className="text-2xl font-semibold text-gray-800">
-              Create your account
+            <h2 className="text-2xl font-semibold text-gray-900">
+              Create account
             </h2>
             <p className="text-sm text-gray-500 mt-1">
-              Get started in seconds
+              Enter your details to continue
             </p>
           </div>
 
-          {/* INPUTS */}
           <div className="space-y-4">
 
             <div className="relative">
-              <User className="absolute left-3 top-3 text-gray-400" size={18} />
+              <User className="absolute left-3 top-3.5 text-gray-400" size={18} />
               <input
                 type="text"
                 placeholder="Full name"
                 className="input"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
               />
             </div>
 
             <div className="relative">
-              <Mail className="absolute left-3 top-3 text-gray-400" size={18} />
+              <Mail className="absolute left-3 top-3.5 text-gray-400" size={18} />
               <input
                 type="email"
                 placeholder="Email address"
                 className="input"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
 
             <div className="relative">
-              <Lock className="absolute left-3 top-3 text-gray-400" size={18} />
+              <Lock className="absolute left-3 top-3.5 text-gray-400" size={18} />
               <input
                 type="password"
                 placeholder="Password"
                 className="input"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
               />
             </div>
 
           </div>
 
-          {/* BUTTON */}
           <button
             onClick={handleSignup}
             disabled={loading}
-            className="mt-6 w-full py-2.5 rounded-lg font-medium text-white
-            bg-black hover:bg-gray-900 transition"
+            className="mt-5 w-full py-3 rounded-xl font-medium text-white
+            bg-gradient-to-r from-indigo-600 to-blue-500
+            hover:opacity-95 transition"
           >
             {loading ? "Creating..." : "Create account"}
           </button>
 
-          {/* DIVIDER */}
-          <div className="flex items-center gap-3 my-6">
+          <div className="flex items-center gap-3 my-5">
             <div className="flex-1 h-px bg-gray-200" />
             <span className="text-xs text-gray-400">OR</span>
             <div className="flex-1 h-px bg-gray-200" />
           </div>
 
-          {/* GOOGLE */}
-          <button className="w-full flex items-center justify-center gap-3 py-2.5 rounded-lg border text-sm hover:bg-gray-50 transition">
+          <button className="w-full flex items-center justify-center gap-2.5 py-3 
+          rounded-xl border border-gray-200 bg-white 
+          text-sm font-medium hover:bg-gray-50 transition">
             <img
               src="https://www.svgrepo.com/show/475656/google-color.svg"
               className="w-5 h-5"
@@ -133,9 +103,8 @@ export default function SignupPage() {
             Continue with Google
           </button>
 
-          {/* LOGIN */}
-          <p className="text-center text-sm text-gray-500 mt-6">
-            Already have an account?{" "}
+          <p className="text-center text-sm text-gray-500 mt-5">
+            Already have an account{" "}
             <Link href="/login" className="text-black font-medium hover:underline">
               Sign in
             </Link>
