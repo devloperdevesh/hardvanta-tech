@@ -2,7 +2,7 @@ import Navbar from "@/components/layout/Navbar";
 import Recommended from "@/components/product/Recommended";
 
 async function getProduct(id: string) {
-  const res = await fetch(`http://localhost:3000/api/products`);
+  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/products`);
   const products = await res.json();
   return products.find((p: any) => p.id == id);
 }
