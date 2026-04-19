@@ -1,17 +1,40 @@
+\"use client";
+
 import Navbar from "@/components/layout/Navbar";
 import Recommended from "@/components/product/Recommended";
 
 async function getProduct(id: string) {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/products`);
-  const products = await res.json();
-  return products.find((p: any) => p.id == id);
+  try {
+    const res = await fetch(`/api/products`, {
+      cache: "no-store",
+    });
+
+    const products = await res.json();
+
+    return products.find((p: any) => p.id == id);
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
 }
 
-export default async function ProductPage({ params }: any) {
-  const product = await getProduct(params.id);
+export default function ProductPage({ params }: any) {
+  const [product, setProduct] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    getProduct(params.id).then(setProduct);
+  }, [params.id]);
+
+  if (!product) {
+    return (
+      <main className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-500">Loading product...</p>
+      </main>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-[#f1f3f6]">
 
       <Navbar />
 
@@ -25,7 +48,7 @@ export default async function ProductPage({ params }: any) {
         {/* DETAILS */}
         <div>
 
-          <h1 className="text-3xl font-bold">
+          <h1 className="text-3xl font-bold text-gray-800">
             {product.name}
           </h1>
 
@@ -33,11 +56,17 @@ export default async function ProductPage({ params }: any) {
             {product.category || "Electronics"}
           </p>
 
-          <p className="text-2xl font-bold text-blue-600 mt-4">
+          <p className="text-2xl font-bold text-[#1b6ca8] mt-4">
             ₹{product.price}
           </p>
 
-          <button className="btn mt-6">
+          <button className="
+            mt-6 px-6 py-2.5 rounded-lg
+            bg-gradient-to-r from-[#0f4c81] to-[#1b6ca8]
+            text-white font-medium
+            hover:scale-[1.03] active:scale-[0.97]
+            transition-all duration-300 shadow-md
+          ">
             Add to Cart
           </button>
 
@@ -45,8 +74,8 @@ export default async function ProductPage({ params }: any) {
 
       </div>
 
-      {/* AI RECOMMENDATION */}
-      <div className="max-w-6xl mx-auto px-6">
+      {/* RECOMMENDED */}
+      <div className="max-w-6xl mx-auto px-6 pb-10">
         <Recommended current={product} products={[product]} />
       </div>
 
