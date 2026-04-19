@@ -1,34 +1,31 @@
-\"use client";
+"use client";
 
+import { useEffect, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Recommended from "@/components/product/Recommended";
 
-async function getProduct(id: string) {
-  try {
-    const res = await fetch(`/api/products`, {
-      cache: "no-store",
-    });
-
-    const products = await res.json();
-
-    return products.find((p: any) => p.id == id);
-  } catch (err) {
-    console.error(err);
-    return null;
-  }
-}
-
 export default function ProductPage({ params }: any) {
-  const [product, setProduct] = React.useState<any>(null);
+  const [product, setProduct] = useState<any>(null);
 
-  React.useEffect(() => {
-    getProduct(params.id).then(setProduct);
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch("/api/products");
+        const products = await res.json();
+        const found = products.find((p: any) => p.id == params.id);
+        setProduct(found);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    load();
   }, [params.id]);
 
   if (!product) {
     return (
       <main className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">Loading product...</p>
+        <p className="text-gray-500">Loading...</p>
       </main>
     );
   }
@@ -47,7 +44,6 @@ export default function ProductPage({ params }: any) {
 
         {/* DETAILS */}
         <div>
-
           <h1 className="text-3xl font-bold text-gray-800">
             {product.name}
           </h1>
@@ -60,16 +56,9 @@ export default function ProductPage({ params }: any) {
             ₹{product.price}
           </p>
 
-          <button className="
-            mt-6 px-6 py-2.5 rounded-lg
-            bg-gradient-to-r from-[#0f4c81] to-[#1b6ca8]
-            text-white font-medium
-            hover:scale-[1.03] active:scale-[0.97]
-            transition-all duration-300 shadow-md
-          ">
+          <button className="mt-6 px-6 py-2.5 rounded-lg bg-gradient-to-r from-[#0f4c81] to-[#1b6ca8] text-white">
             Add to Cart
           </button>
-
         </div>
 
       </div>
