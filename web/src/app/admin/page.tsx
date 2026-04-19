@@ -119,3 +119,70 @@ export default function Admin() {
     </div>
   );
 }
+
+"use client";
+
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+
+const data = [
+  { name: "Mon", sales: 400 },
+  { name: "Tue", sales: 700 },
+  { name: "Wed", sales: 500 },
+  { name: "Thu", sales: 900 },
+  { name: "Fri", sales: 1200 },
+];
+
+export default function AdminPage() {
+  return (
+    <main className="p-10">
+
+      <h1 className="text-3xl font-bold mb-10">
+        Admin Dashboard
+      </h1>
+
+      {/* CARDS */}
+      <div className="grid grid-cols-3 gap-6 mb-10">
+
+        <div className="card p-6">
+          <p className="text-gray-500">Total Sales</p>
+          <h2 className="text-2xl font-bold">₹45,000</h2>
+        </div>
+
+        <div className="card p-6">
+          <p className="text-gray-500">Orders</p>
+          <h2 className="text-2xl font-bold">120</h2>
+        </div>
+
+        <div className="card p-6">
+          <p className="text-gray-500">Users</p>
+          <h2 className="text-2xl font-bold">89</h2>
+        </div>
+
+      </div>
+
+      {/* CHART */}
+      <div className="bg-white p-6 rounded-xl shadow">
+
+        <h2 className="font-semibold mb-4">Sales Overview</h2>
+
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={data}>
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Tooltip />
+            <Line type="monotone" dataKey="sales" />
+          </LineChart>
+        </ResponsiveContainer>
+
+      </div>
+
+    </main>
+  );
+}

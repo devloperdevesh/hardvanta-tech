@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Navbar from "../../../components/layout/Navbar";
-import Recommended from "../../../components/product/Recommended";
+import Navbar from "@/components/layout/Navbar";
+import Recommended from "@/components/product/Recommended";
 import Image from "next/image";
 import { ShoppingCart, Star } from "lucide-react";
 
@@ -16,23 +16,22 @@ type Product = {
 
 export default function ProductPage({ params }: { params: { id: string } }) {
   const [product, setProduct] = useState<Product | null>(null);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
 
   useEffect(() => {
     async function load() {
-      try {
-        const res = await fetch("/api/products");
-        const products = await res.json();
-        const found = products.find((p: Product) => p.id == params.id);
-        setProduct(found || null);
-      } catch (err) {
-        console.error(err);
-      }
+      const res = await fetch("/api/products");
+      const products = await res.json();
+
+      setAllProducts(products);
+
+      const found = products.find((p: Product) => p.id == params.id);
+      setProduct(found || null);
     }
 
     load();
   }, [params.id]);
 
-  // 🔄 LOADING STATE
   if (!product) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-[#f1f3f6]">
@@ -48,26 +47,24 @@ export default function ProductPage({ params }: { params: { id: string } }) {
 
       <div className="max-w-6xl mx-auto px-6 py-10 grid md:grid-cols-2 gap-10">
 
-        {/* 🖼 IMAGE */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm flex items-center justify-center">
+        {/* IMAGE */}
+        <div className="bg-white rounded-2xl p-8 shadow-sm flex items-center justify-center group">
           <Image
             src={product.image || "/logo.png"}
             alt={product.name}
-            width={250}
-            height={250}
-            className="object-contain hover:scale-105 transition duration-300"
+            width={260}
+            height={260}
+            className="object-contain group-hover:scale-110 transition duration-500"
           />
         </div>
 
-        {/* 📦 DETAILS */}
+        {/* DETAILS */}
         <div>
 
-          {/* NAME */}
           <h1 className="text-3xl font-bold text-gray-800 leading-tight">
             {product.name}
           </h1>
 
-          {/* CATEGORY */}
           <p className="text-gray-500 mt-2 text-sm">
             {product.category || "Electronics"}
           </p>
@@ -87,6 +84,9 @@ export default function ProductPage({ params }: { params: { id: string } }) {
             <span className="text-sm text-gray-400 line-through">
               ₹{product.price + 200}
             </span>
+            <span className="text-green-600 text-sm font-medium">
+              20% off
+            </span>
           </div>
 
           {/* STOCK */}
@@ -100,8 +100,8 @@ export default function ProductPage({ params }: { params: { id: string } }) {
             px-6 py-3 rounded-xl text-sm font-medium
             bg-gradient-to-r from-[#0f4c81] via-[#1b6ca8] to-[#3ccf91]
             text-white
-            hover:scale-[1.03] active:scale-[0.97]
-            hover:shadow-lg transition-all duration-300
+            hover:scale-[1.04] active:scale-[0.96]
+            hover:shadow-xl transition-all duration-300
           ">
             <ShoppingCart size={18} />
             Add to Cart
@@ -111,9 +111,9 @@ export default function ProductPage({ params }: { params: { id: string } }) {
 
       </div>
 
-      {/* 🤖 RECOMMENDED */}
-      <div className="max-w-6xl mx-auto px-6 pb-10">
-        <Recommended current={product} products={[product]} />
+      {/* RECOMMENDED */}
+      <div className="max-w-6xl mx-auto px-6 pb-12">
+        <Recommended current={product} products={allProducts} />
       </div>
 
     </main>

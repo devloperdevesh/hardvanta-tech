@@ -7,3 +7,18 @@ export default function CartSummary({ cart }: any) {
       </div>
     );
   }
+  async function handleCheckout(cart: any[]) {
+    const res = await fetch("/api/checkout", {
+      method: "POST",
+      body: JSON.stringify({ items: cart }),
+    });
+  
+    const data = await res.json();
+    window.location.href = data.url;
+  }
+  <button
+  onClick={() => handleCheckout(cart)}
+  className="btn w-full mt-4"
+>
+  Checkout
+</button>

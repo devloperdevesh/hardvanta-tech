@@ -299,3 +299,27 @@ body {
 html {
   scroll-behavior: smooth;
 }
+body {
+  background: #f1f3f6;
+  font-family: system-ui, sans-serif;
+}
+
+/* smooth animations */
+* {
+  transition: all 0.2s ease;
+}
+
+/* button hover feel */
+button {
+  cursor: pointer;
+}
+
+/* scrollbar premium */
+::-webkit-scrollbar {
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 10px;
+}
