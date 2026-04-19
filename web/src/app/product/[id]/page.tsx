@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Navbar from "@/components/layout/Navbar";
-import Recommended from "@/components/product/Recommended";
+import Navbar from "../../../components/layout/Navbar";
+import Recommended from "../../../components/product/Recommended";
 
 export default function ProductPage({ params }: any) {
   const [product, setProduct] = useState<any>(null);
