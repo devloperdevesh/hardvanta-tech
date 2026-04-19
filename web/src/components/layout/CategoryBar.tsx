@@ -30,12 +30,14 @@ export default function CategoryBar() {
 
   // 🎯 Auto center
   useEffect(() => {
-    const activeKey = activeQuery || pathname.split("/").pop();
+    const activeKey = activeQuery?.toLowerCase() || pathname.split("/").pop();
 
-    if (!activeKey || !containerRef.current || !itemRefs.current[activeKey]) return;
+    if (!activeKey || !containerRef.current) return;
+
+    const el = itemRefs.current[activeKey];
+    if (!el) return;
 
     const container = containerRef.current;
-    const el = itemRefs.current[activeKey]!;
 
     container.scrollTo({
       left: el.offsetLeft - container.offsetWidth / 2 + el.offsetWidth / 2,
@@ -56,21 +58,23 @@ export default function CategoryBar() {
         >
           {categories.map(({ name, icon: Icon }) => {
             const slug = name.toLowerCase();
+
             const isActive =
-              activeQuery === name || pathname === `/category/${slug}`;
+              activeQuery?.toLowerCase() === slug ||
+              pathname === `/category/${slug}`;
 
             return (
               <MagneticItem key={name}>
                 <Link
                   href={`/category/${slug}`}
-                  ref={(el) => (itemRefs.current[slug] = el)}
+                  ref={(el) => {
+                    itemRefs.current[slug] = el;   // ✅ FIXED
+                  }}
                   className="relative flex flex-col items-center snap-center group"
                 >
                   {/* ICON */}
                   <motion.div
-                    animate={{
-                      scale: isActive ? 1.2 : 1,
-                    }}
+                    animate={{ scale: isActive ? 1.2 : 1 }}
                     transition={{ type: "spring", stiffness: 300 }}
                     className={`
                       relative flex items-center justify-center
