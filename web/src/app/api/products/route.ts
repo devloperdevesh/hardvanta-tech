@@ -9,6 +9,11 @@ type Product = {
   image: string;
 };
 
+function getTotal(total: number | { value: number } | undefined): number {
+  if (typeof total === "number") return total;
+  return total?.value ?? 0;
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
 
@@ -16,9 +21,12 @@ export async function GET(req: Request) {
   const category = searchParams.get("category");
   const minPrice = searchParams.get("minPrice");
   const maxPrice = searchParams.get("maxPrice");
+  const page = Number(searchParams.get("page") || 1);
+  const limit = 8;
+
+  const from = (page - 1) * limit;
 
   try {
-    // 🧠 Build Filters
     const filters: any[] = [];
 
     if (category) {
@@ -36,7 +44,6 @@ export async function GET(req: Request) {
       });
     }
 
-    // 🔍 Build Query
     const esQuery: any = {
       bool: {
         must: [],
@@ -56,60 +63,28 @@ export async function GET(req: Request) {
 
     const result = await esClient.search({
       index: "products",
+      from,
+      size: limit,
       query: esQuery,
     });
 
     const products: Product[] =
       result.hits?.hits?.map((hit: any) => hit._source) || [];
 
-    // 👉 Fallback if no results
-    if (products.length === 0) {
-      return Response.json(productsData);
-    }
+    const total = getTotal(result.hits?.total);
 
-    return Response.json(products);
-  } catch (error) {
-    console.error("Search Error:", error);
+    return Response.json({
+      products,
+      total,
+      hasMore: from + limit < total,
+    });
 
-    // 👉 Fallback if ES fails
-    return Response.json(productsData);
+  } catch (error: any) {
+    console.error("ES Error:", error.message);
+
+    return Response.json(
+      { error: "Failed to fetch products" },
+      { status: 500 }
+    );
   }
 }
-
-/* 📦 Static Data (Fallback Products) */
-const productsData: Product[] = [
-  {
-    id: 1,
-    name: "Raspberry Pi 4 Model B (4GB)",
-    brand: "Raspberry Pi",
-    price: 4999,
-    category: "Processors",
-    image: "https://picsum.photos/seed/pi/300/300",
-  },
-  {
-    id: 2,
-    name: "Arduino Uno R3",
-    brand: "Arduino",
-    price: 699,
-    category: "Processors",
-    image: "https://picsum.photos/seed/arduino/300/300",
-  },
-  {
-    id: 3,
-    name: "NodeMCU ESP8266",
-    brand: "Espressif",
-    price: 249,
-    category: "Processors",
-    image: "https://picsum.photos/seed/nodemcu/300/300",
-  },
-
-  // 🔥 Auto-generated products
-  ...Array.from({ length: 30 }, (_, i) => ({
-    id: 4 + i,
-    name: `Electronic Component ${i + 1}`,
-    brand: ["Generic", "Adafruit", "SparkFun"][i % 3],
-    price: Math.floor(Math.random() * 1000) + 50,
-    category: ["Processors", "Sensors", "ICs"][i % 3],
-    image: `https://picsum.photos/seed/product${i}/300/300`,
-  })),
-];

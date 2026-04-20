@@ -5,12 +5,12 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-[#f1f3f6] text-black">
+    <main className="min-h-screen bg-[#f8fafc] text-gray-900">
       {/* NAVBAR */}
       <Navbar />
 
       {/* CATEGORY BAR */}
-      <div className="sticky top-[64px] z-40 bg-white/90 backdrop-blur-md border-b border-gray-200">
+      <div className="sticky top-[64px] z-40 bg-white/70 backdrop-blur-xl border-b border-gray-200/60">
         <div className="max-w-7xl mx-auto flex justify-center">
           <div className="flex gap-8 px-6 py-3 text-sm overflow-x-auto scrollbar-hide">
             {["Processors", "Sensors", "ICs", "Modules", "Networking"].map(
@@ -18,12 +18,7 @@ export default function Home() {
                 <Link
                   href={`/category/${item.toLowerCase()}`}
                   key={item}
-                  className="
-                  whitespace-nowrap font-medium text-gray-600
-                  hover:text-[#1b6ca8]
-                  transition-all duration-200
-                  hover:scale-105
-                "
+                  className="whitespace-nowrap font-medium text-gray-600 hover:text-[#1b6ca8] transition-all duration-200 hover:underline underline-offset-4"
                 >
                   {item}
                 </Link>
@@ -34,96 +29,62 @@ export default function Home() {
       </div>
 
       {/* HERO */}
-      <section className="px-6 mt-6">
-        <div
-          className="
-          max-w-7xl mx-auto 
-          rounded-2xl 
-          px-8 py-12 md:px-12 md:py-14
-          flex items-center justify-between
-          bg-gradient-to-r from-[#0f4c81] via-[#1b6ca8] to-[#3ccf91]
-          text-white shadow-xl
-        "
-        >
+      <section className="px-6 mt-8">
+        <div className="relative max-w-7xl mx-auto rounded-3xl px-10 py-16 md:px-14 md:py-20 flex items-center justify-between bg-gradient-to-br from-[#0f4c81] via-[#1b6ca8] to-[#2563eb] text-white shadow-[0_30px_80px_rgba(0,0,0,0.25)] overflow-hidden">
+          {/* LIGHT BLOBS */}
+          <div className="absolute -top-28 -right-28 w-[400px] h-[400px] bg-white/10 blur-3xl rounded-full" />
+          <div className="absolute bottom-[-120px] left-[-100px] w-[300px] h-[300px] bg-blue-300/10 blur-3xl rounded-full" />
+
           {/* LEFT */}
-          <div className="max-w-lg">
-            {/* LOGO + NAME */}
-            <div className="flex items-center gap-3 mb-4">
-              <Image
-                src="/logo.png"
-                alt="logo"
-                width={42}
-                height={42}
-                className="object-contain"
-              />
-              <span
-                className="
-                text-lg font-semibold tracking-wide
-                bg-white/90 text-transparent bg-clip-text
-              "
-              >
+          <div className="max-w-xl relative z-10">
+            <div className="flex items-center gap-3 mb-6">
+              <Image src="/logo.png" alt="logo" width={46} height={46} />
+              <span className="text-lg font-semibold tracking-tight">
                 Hardvanta
               </span>
             </div>
 
-            {/* TITLE */}
-            <h1 className="text-4xl md:text-5xl font-bold leading-tight">
-              Industrial Electronics Hub
+            <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-[1.1]">
+              Industrial Electronics <br /> Marketplace
             </h1>
 
-            {/* SUBTEXT */}
-            <p className="mt-3 text-sm md:text-base opacity-90">
-              Sensors, ICs, Modules & high-performance components for engineers.
+            <p className="mt-5 text-base md:text-lg opacity-90 leading-relaxed">
+              Discover high-performance components built for engineers,
+              startups, and next-generation hardware innovation.
             </p>
 
-            {/* CTA */}
             <Link href="/products">
-              <button
-                className="
-                mt-6 px-6 py-2.5 rounded-lg font-medium
-                bg-white text-black
-                hover:scale-105 active:scale-95
-                hover:shadow-lg transition-all duration-300
-              "
-              >
-                Shop Now →
+              <button className="mt-8 px-7 py-3.5 rounded-xl font-medium bg-white text-black shadow-md hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+                Explore Products →
               </button>
             </Link>
           </div>
 
-          {/* RIGHT */}
-          <div className="hidden md:flex text-7xl opacity-80 animate-pulse">
-            ⚡
+          {/* RIGHT BRAND */}
+          <div className="hidden md:flex text-[140px] font-bold opacity-[0.06] select-none tracking-widest">
+            HV
           </div>
         </div>
       </section>
 
       {/* PRODUCT GRID */}
-      <section className="max-w-7xl mx-auto px-6 mt-12">
+      <section className="max-w-7xl mx-auto px-6 mt-16">
         <ProductGrid />
       </section>
 
-      {/* ================== FOOTER ================== */}
-      <footer className="mt-24 border-t bg-gradient-to-b from-white to-gray-50">
+      {/* FOOTER */}
+      <footer className="mt-28 border-t border-gray-200 bg-white">
         <div className="max-w-7xl mx-auto px-6 py-16 grid md:grid-cols-3 gap-12">
           {/* BRAND */}
           <div className="space-y-5">
-            <div className="flex items-center gap-3 group">
+            <div className="flex items-center gap-3">
               <Image
                 src="/logo.png"
                 alt="Hardvanta logo"
-                width={38}
-                height={38}
-                className="transition duration-300 group-hover:scale-105"
+                width={40}
+                height={40}
               />
-
-              <span
-                className="
-          text-xl font-semibold tracking-tight
-          bg-gradient-to-r from-[#0f4c81] to-[#3ccf91]
-          bg-clip-text text-transparent
-        "
-              >
+              <span className="text-xl font-semibold tracking-tight">
                 Hardvanta
               </span>
             </div>
@@ -136,28 +97,17 @@ export default function Home() {
 
           {/* PRODUCTS */}
           <div>
-            <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-5">
+            <h3 className="text-xs font-semibold uppercase tracking-wider mb-5 text-gray-900">
               Products
             </h3>
-
             <ul className="space-y-3 text-sm text-gray-600">
               {["Processors", "Sensors", "Modules"].map((item) => (
                 <li key={item}>
                   <Link
                     href={`/category/${item.toLowerCase()}`}
-                    className="group inline-flex items-center gap-2 transition-all duration-200"
+                    className="hover:text-[#1b6ca8] transition"
                   >
-                    <span className="group-hover:text-[#1b6ca8]">{item}</span>
-
-                    <span
-                      className="
-                opacity-0 -translate-x-1
-                group-hover:opacity-100 group-hover:translate-x-0
-                transition-all duration-200
-              "
-                    >
-                      →
-                    </span>
+                    {item}
                   </Link>
                 </li>
               ))}
@@ -166,28 +116,17 @@ export default function Home() {
 
           {/* SUPPORT */}
           <div>
-            <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-5">
+            <h3 className="text-xs font-semibold uppercase tracking-wider mb-5 text-gray-900">
               Support
             </h3>
-
             <ul className="space-y-3 text-sm text-gray-600">
               {["Contact", "Help", "Privacy"].map((item) => (
                 <li key={item}>
                   <Link
                     href={`/${item.toLowerCase()}`}
-                    className="group inline-flex items-center gap-2 transition-all duration-200"
+                    className="hover:text-[#1b6ca8] transition"
                   >
-                    <span className="group-hover:text-[#1b6ca8]">{item}</span>
-
-                    <span
-                      className="
-                opacity-0 -translate-x-1
-                group-hover:opacity-100 group-hover:translate-x-0
-                transition-all duration-200
-              "
-                    >
-                      →
-                    </span>
+                    {item}
                   </Link>
                 </li>
               ))}
@@ -195,14 +134,12 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ================== BOTTOM BAR ================== */}
-        <div className="border-t bg-white/70 backdrop-blur-md">
-          <div className="max-w-7xl mx-auto px-6 py-5 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-500">
-            <p className="text-center md:text-left">
-              © 2026 Hardvanta Technologies LLP. All rights reserved.
-            </p>
+        {/* BOTTOM */}
+        <div className="border-t border-gray-200">
+          <div className="max-w-7xl mx-auto px-6 py-5 flex flex-col md:flex-row justify-between items-center text-sm text-gray-500 gap-3">
+            <p>© 2026 Hardvanta Technologies LLP</p>
 
-            <div className="flex items-center gap-6">
+            <div className="flex gap-6">
               {["Terms", "Privacy", "Cookies"].map((item) => (
                 <Link
                   key={item}
