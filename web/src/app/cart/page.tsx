@@ -5,110 +5,147 @@ import Navbar from "@/components/layout/Navbar";
 import Image from "next/image";
 import { Trash2 } from "lucide-react";
 
+type CartItem = {
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  image?: string;
+};
+
 export default function CartPage() {
-  const [cart, setCart] = useState<any[]>([]);
+  const [cart, setCart] = useState<CartItem[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [paying, setPaying] = useState(false);
 
   useEffect(() => {
-    fetch("/api/cart")
-      .then((res) => res.json())
-      .then(setCart)
-      .catch(() => setCart([]));
+    async function loadCart() {
+      try {
+        const res = await fetch("/api/cart");
+        const data = await res.json();
+        setCart(data.data || []);
+      } catch {
+        setCart([]);
+      }
+    }
+    loadCart();
   }, []);
 
-  const total = cart.reduce((sum, item) => sum + item.price, 0);
+  async function removeItem(id: string) {
+    setLoading(true);
+    try {
+      await fetch(`/api/cart/${id}`, { method: "DELETE" });
+      setCart((prev) => prev?.filter((i) => i.productId !== id) || []);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // 🔥 FINAL PAYMENT FUNCTION
+  async function handlePayment() {
+    try {
+      setPaying(true);
+
+      const res = await fetch("/api/payment/create-order", {
+        method: "POST",
+      });
+
+      const { data } = await res.json();
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY,
+        amount: data.amount,
+        order_id: data.id,
+
+        handler: async function (response: any) {
+          const verifyRes = await fetch("/api/payment/verify", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(response),
+          });
+
+          const verifyData = await verifyRes.json();
+
+          if (verifyData.success) {
+            window.location.href = "/success";
+          } else {
+            alert("❌ Payment verification failed");
+          }
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      alert("Payment failed");
+    } finally {
+      setPaying(false);
+    }
+  }
+
+  if (!cart) {
+    return <p className="p-6">Loading...</p>;
+  }
+
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   return (
     <main className="min-h-screen bg-[#f1f3f6]">
-
       <Navbar />
 
       <div className="max-w-6xl mx-auto px-6 py-8 grid md:grid-cols-3 gap-6">
-
-        {/* LEFT - CART ITEMS */}
+        {/* LEFT */}
         <div className="md:col-span-2 space-y-4">
-
           <h1 className="text-2xl font-bold">Your Cart</h1>
 
           {cart.length === 0 ? (
-            <div className="bg-white p-10 rounded-2xl shadow text-center">
-              <p className="text-gray-500">🛒 Your cart is empty</p>
+            <div className="bg-white p-10 rounded-2xl text-center">
+              Empty cart
             </div>
           ) : (
-            cart.map((item, i) => (
-              <div
-                key={i}
-                className="bg-white p-4 rounded-2xl shadow-sm flex items-center gap-4 hover:shadow-md transition"
-              >
-                {/* IMAGE */}
+            cart.map((item) => (
+              <div key={item.productId} className="bg-white p-4 flex gap-4">
                 <Image
                   src={item.image || "/placeholder.png"}
                   alt={item.name}
                   width={80}
                   height={80}
-                  className="rounded-lg object-cover"
                 />
 
-                {/* DETAILS */}
                 <div className="flex-1">
-                  <h2 className="font-medium text-gray-800">
-                    {item.name}
-                  </h2>
-                  <p className="text-sm text-gray-500">
-                    Electronics Component
-                  </p>
-
-                  <div className="mt-2 text-[#1b6ca8] font-semibold">
-                    ₹{item.price}
-                  </div>
+                  <p>{item.name}</p>
+                  <p>Qty: {item.quantity}</p>
+                  <p>₹{item.price * item.quantity}</p>
                 </div>
 
-                {/* REMOVE */}
-                <button className="text-gray-400 hover:text-red-500 transition">
+                <button onClick={() => removeItem(item.productId)}>
                   <Trash2 size={18} />
                 </button>
               </div>
             ))
           )}
-
         </div>
 
-        {/* RIGHT - SUMMARY */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm h-fit sticky top-24">
+        {/* RIGHT */}
+        <div className="bg-white p-6 rounded-2xl sticky top-24">
+          <h2 className="font-semibold mb-4">Summary</h2>
 
-          <h2 className="text-lg font-semibold mb-4">
-            Order Summary
-          </h2>
-
-          <div className="flex justify-between text-sm mb-2">
-            <span>Subtotal</span>
-            <span>₹{total}</span>
-          </div>
-
-          <div className="flex justify-between text-sm mb-2">
-            <span>Shipping</span>
-            <span className="text-green-600">Free</span>
-          </div>
-
-          <div className="border-t my-3" />
-
-          <div className="flex justify-between font-semibold text-lg">
+          <div className="flex justify-between">
             <span>Total</span>
             <span>₹{total}</span>
           </div>
 
           <button
-            className="w-full mt-5 py-2.5 rounded-lg text-white font-medium
-            bg-gradient-to-r from-[#0f4c81] to-[#1b6ca8]
-            hover:scale-[1.02] active:scale-[0.98]
-            hover:shadow-lg transition-all"
+            onClick={handlePayment}
+            disabled={paying || cart.length === 0}
+            className="w-full mt-5 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-60"
           >
-            Checkout →
+            {paying ? "Processing..." : "Checkout →"}
           </button>
-
         </div>
-
       </div>
-
     </main>
   );
 }

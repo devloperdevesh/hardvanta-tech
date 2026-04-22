@@ -1,9 +1,15 @@
 import { addToCart, getCart } from "./service";
 
-export function handleAddToCart(product: any) {
-  return addToCart(product);
+// ================= ADD =================
+export function handleAddToCart(
+  userId: string,
+  productId: string,
+  quantity: number = 1
+) {
+  return addToCart(userId, productId, quantity);
 }
 
-export function handleGetCart() {
-  return getCart();
+// ================= GET =================
+export function handleGetCart(userId: string) {
+  return getCart(userId);
 }

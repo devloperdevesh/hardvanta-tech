@@ -16,7 +16,7 @@ out/
 /dist
 
 # =========================
-# Environment Variables (CRITICAL)
+# Environment Variables (CRITICAL 🚨)
 # =========================
 .env
 .env.local
@@ -39,7 +39,7 @@ pnpm-debug.log*
 Thumbs.db
 
 # =========================
-# Coverage / Testing
+# Testing / Coverage
 # =========================
 /coverage
 
@@ -64,3 +64,17 @@ Thumbs.db
 # =========================
 *.tmp
 *.temp
+
+# =========================
+# Prisma (IMPORTANT ⚠️)
+# =========================
+/generated/prisma
+
+# Optional: Uncomment if using Prisma local DB
+# prisma/dev.db
+# prisma/dev.db-journal
+
+# =========================
+# OS / Cache
+# =========================
+.cache/
