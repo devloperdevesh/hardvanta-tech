@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,8 +18,10 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export default function LoginPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [show, setShow] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   const {
     register,
@@ -31,6 +34,7 @@ export default function LoginPage() {
   async function onSubmit(data: FormData) {
     try {
       setLoading(true);
+      setErrorMsg("");
 
       const res = await fetch("/api/auth/login", {
         method: "POST",
@@ -44,9 +48,10 @@ export default function LoginPage() {
         throw new Error(result.message || "Login failed");
       }
 
-      window.location.href = "/";
+      // ✅ Proper redirect
+      router.push("/");
     } catch (err: any) {
-      alert(err.message);
+      setErrorMsg(err.message);
     } finally {
       setLoading(false);
     }
@@ -67,9 +72,9 @@ export default function LoginPage() {
         </div>
 
         {/* RIGHT PANEL */}
-        <div className="flex flex-col justify-center px-12 py-12 space-y-7">
+        <div className="flex flex-col justify-center px-12 py-12 space-y-6">
           {/* Heading */}
-          <div className="space-y-1">
+          <div>
             <h2 className="text-2xl font-semibold text-gray-900">
               Login to your account
             </h2>
@@ -78,21 +83,24 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Inputs */}
-          <div className="space-y-5">
+          {/* Error message */}
+          {errorMsg && (
+            <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-lg border border-red-200">
+              {errorMsg}
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {/* Email */}
             <div>
               <input
                 type="email"
                 placeholder="Email address"
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                className="input"
                 {...register("email")}
               />
-              {errors.email && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.email.message}
-                </p>
-              )}
+              {errors.email && <p className="error">{errors.email.message}</p>}
             </div>
 
             {/* Password */}
@@ -100,7 +108,7 @@ export default function LoginPage() {
               <input
                 type={show ? "text" : "password"}
                 placeholder="Password"
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-14 outline-none transition"
+                className="input pr-14"
                 {...register("password")}
               />
 
@@ -113,37 +121,31 @@ export default function LoginPage() {
               </button>
 
               {errors.password && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.password.message}
-                </p>
+                <p className="error">{errors.password.message}</p>
               )}
             </div>
-          </div>
 
-          {/* Remember */}
-          <div className="flex items-center justify-between text-sm">
-            <label className="flex items-center gap-2 text-gray-600">
-              <input
-                type="checkbox"
-                className="accent-blue-600"
-                {...register("remember")}
-              />
-              Remember me
-            </label>
+            {/* Remember + Forgot */}
+            <div className="flex items-center justify-between text-sm">
+              <label className="flex items-center gap-2 text-gray-600">
+                <input
+                  type="checkbox"
+                  className="accent-blue-600"
+                  {...register("remember")}
+                />
+                Remember me
+              </label>
 
-            <Link href="/forgot" className="text-blue-600 hover:underline">
-              Forgot password?
-            </Link>
-          </div>
+              <Link href="/forgot" className="text-blue-600 hover:underline">
+                Forgot password?
+              </Link>
+            </div>
 
-          {/* Button */}
-          <button
-            onClick={handleSubmit(onSubmit)}
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition active:scale-[0.98]"
-          >
-            {loading ? "Logging in..." : "Login"}
-          </button>
+            {/* Submit */}
+            <button type="submit" disabled={loading} className="btn-primary">
+              {loading ? "Logging in..." : "Login"}
+            </button>
+          </form>
 
           {/* Divider */}
           <div className="flex items-center gap-3 text-xs text-gray-400">
@@ -152,10 +154,10 @@ export default function LoginPage() {
             <div className="flex-1 h-px bg-gray-300"></div>
           </div>
 
-          {/* Google */}
+          {/* Google Login */}
           <button
             type="button"
-            onClick={() => signIn("google")}
+            onClick={() => signIn("google", { callbackUrl: "/" })}
             className="w-full py-3 border border-gray-300 rounded-lg flex items-center justify-center gap-3 hover:bg-gray-50 transition font-medium text-gray-700"
           >
             <FcGoogle size={20} />

@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import Providers from "./providers";
 
@@ -8,6 +9,14 @@ const font = Geist({
   variable: "--font-sans",
 });
 
+// ✅ FIXED: move viewport here
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#1b6ca8",
+};
+
+// ✅ CLEAN METADATA
 export const metadata: Metadata = {
   title: {
     default: "Hardvanta",
@@ -29,13 +38,6 @@ export const metadata: Metadata = {
   ],
 
   metadataBase: new URL("https://hardvanta.com"),
-
-  themeColor: "#1b6ca8",
-
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-  },
 
   openGraph: {
     title: "Hardvanta",
@@ -77,6 +79,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${font.variable} scroll-smooth`}>
       <body className="bg-[#f8fafc] text-gray-900 antialiased">
+        {/* ✅ Razorpay Script (CORRECT WAY) */}
+        <Script
+          src="https://checkout.razorpay.com/v1/checkout.js"
+          strategy="beforeInteractive"
+        />
+
         <Providers>
           <div className="min-h-screen flex flex-col">
             <main className="flex-1">{children}</main>
@@ -86,4 +94,3 @@ export default function RootLayout({
     </html>
   );
 }
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>;
