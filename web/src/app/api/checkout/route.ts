@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { db } from "@/lib/db"; // ✅ FIXED
+import { db } from "@/lib/db";
 import { getUser } from "@/lib/auth";
 import { z } from "zod";
 
 // ================= INIT =================
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
 
 // ================= SCHEMA =================
 const checkoutSchema = z.object({
@@ -16,6 +16,13 @@ const checkoutSchema = z.object({
     })
   ),
 });
+
+// ================= TYPES =================
+type Product = {
+  id: string;
+  name: string;
+  price: number;
+};
 
 // ================= API =================
 export async function POST(req: NextRequest) {
@@ -46,9 +53,14 @@ export async function POST(req: NextRequest) {
     // 🧠 FETCH PRODUCTS
     const productIds = items.map((i) => i.productId);
 
-    const products = await db.product.findMany({
+    const products: Product[] = await db.product.findMany({
       where: {
         id: { in: productIds },
+      },
+      select: {
+        id: true,
+        name: true,
+        price: true,
       },
     });
 
@@ -60,30 +72,32 @@ export async function POST(req: NextRequest) {
     }
 
     // 💰 LINE ITEMS
-    const lineItems = items.map((item) => {
-      const product = products.find((p) => p.id === item.productId);
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] =
+      items.map((item) => {
+        const product = products.find(
+          (p: Product) => p.id === item.productId
+        );
 
-      if (!product) throw new Error("Product not found");
+        if (!product) throw new Error("Product not found");
 
-      return {
-        price_data: {
-          currency: "inr",
-          product_data: {
-            name: product.name,
+        return {
+          price_data: {
+            currency: "inr",
+            product_data: {
+              name: product.name,
+            },
+            unit_amount: Math.round(product.price * 100),
           },
-          unit_amount: Math.round(product.price * 100),
-        },
-        quantity: item.quantity,
-      };
-    });
+          quantity: item.quantity,
+        };
+      });
 
     // 🧾 TOTAL
-    const totalAmount = lineItems.reduce(
-      (sum, item) =>
-        sum +
-        (item.price_data.unit_amount || 0) * (item.quantity || 1),
-      0
-    );
+    const totalAmount = lineItems.reduce((sum, item) => {
+      const unit = item.price_data?.unit_amount ?? 0;
+      const qty = item.quantity ?? 1;
+      return sum + unit * qty;
+    }, 0);
 
     // 🧾 CREATE ORDER
     const order = await db.order.create({
@@ -97,7 +111,7 @@ export async function POST(req: NextRequest) {
     // 💳 STRIPE SESSION
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      line_items: lineItems as any, // ⚡ Stripe typing workaround
+      line_items: lineItems,
       success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/success?orderId=${order.id}`,
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/cart`,
       metadata: {
