@@ -1,13 +1,23 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaNeon } from "@prisma/adapter-neon";
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
 };
 
+// ✅ adapter with connection string (CORRECT WAY)
+const adapter = new PrismaNeon({
+  connectionString: process.env.DATABASE_URL!,
+});
+
 export const db =
   globalForPrisma.prisma ??
   new PrismaClient({
-    log: ["query", "error", "warn"],
+    adapter,
+    log:
+      process.env.NODE_ENV === "development"
+        ? ["query", "warn", "error"]
+        : ["error"],
   });
 
 if (process.env.NODE_ENV !== "production") {

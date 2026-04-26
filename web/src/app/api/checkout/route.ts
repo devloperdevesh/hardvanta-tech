@@ -1,55 +1,125 @@
+import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
+import { db } from "@/lib/db"; // ✅ FIXED
+import { getUser } from "@/lib/auth";
+import { z } from "zod";
 
+// ================= INIT =================
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-// ================= TYPES =================
-type CartItem = {
-  productId: string;
-  quantity: number;
-};
+// ================= SCHEMA =================
+const checkoutSchema = z.object({
+  items: z.array(
+    z.object({
+      productId: z.string(),
+      quantity: z.number().min(1),
+    })
+  ),
+});
 
-// ================= CHECKOUT =================
-export async function POST(req: Request) {
+// ================= API =================
+export async function POST(req: NextRequest) {
   try {
-    const { items, userId } = await req.json();
+    // 🔐 AUTH
+    const user = await getUser();
 
-    if (!items || !Array.isArray(items)) {
-      return Response.json({ error: "Invalid items" }, { status: 400 });
+    if (!user) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    const dbProducts = await getProductsFromDB(items);
+    // 📦 BODY
+    const body = await req.json();
+    const parsed = checkoutSchema.safeParse(body);
 
-    const lineItems = dbProducts.map((p: any) => ({
-      price_data: {
-        currency: "inr",
-        product_data: {
-          name: p.name,
-        },
-        unit_amount: p.price * 100,
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, message: "Invalid request" },
+        { status: 400 }
+      );
+    }
+
+    const { items } = parsed.data;
+
+    // 🧠 FETCH PRODUCTS
+    const productIds = items.map((i) => i.productId);
+
+    const products = await db.product.findMany({
+      where: {
+        id: { in: productIds },
       },
-      quantity: p.quantity,
-    }));
-
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      line_items: lineItems,
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/cart`,
-      metadata: { userId },
     });
 
-    return Response.json({ url: session.url });
+    if (products.length !== items.length) {
+      return NextResponse.json(
+        { success: false, message: "Invalid products" },
+        { status: 400 }
+      );
+    }
 
-  } catch (err) {
-    return Response.json({ error: "Checkout failed" }, { status: 500 });
+    // 💰 LINE ITEMS
+    const lineItems = items.map((item) => {
+      const product = products.find((p) => p.id === item.productId);
+
+      if (!product) throw new Error("Product not found");
+
+      return {
+        price_data: {
+          currency: "inr",
+          product_data: {
+            name: product.name,
+          },
+          unit_amount: Math.round(product.price * 100),
+        },
+        quantity: item.quantity,
+      };
+    });
+
+    // 🧾 TOTAL
+    const totalAmount = lineItems.reduce(
+      (sum, item) =>
+        sum +
+        (item.price_data.unit_amount || 0) * (item.quantity || 1),
+      0
+    );
+
+    // 🧾 CREATE ORDER
+    const order = await db.order.create({
+      data: {
+        userId: user.id,
+        status: "PENDING",
+        total: totalAmount / 100,
+      },
+    });
+
+    // 💳 STRIPE SESSION
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items: lineItems as any, // ⚡ Stripe typing workaround
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/success?orderId=${order.id}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/cart`,
+      metadata: {
+        userId: user.id,
+        orderId: String(order.id),
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      url: session.url,
+    });
+
+  } catch (err: any) {
+    console.error("STRIPE_ERROR:", err);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: err.message || "Checkout failed",
+      },
+      { status: 500 }
+    );
   }
-}
-
-// ================= MOCK HELPERS =================
-async function getProductsFromDB(items: CartItem[]) {
-  return items.map((i) => ({
-    name: `Product ${i.productId}`,
-    price: 499,
-    quantity: i.quantity,
-  }));
 }

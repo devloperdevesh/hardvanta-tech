@@ -1,23 +1,26 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import Script from "next/script";
+import { ReactNode } from "react";
+
 import "./globals.css";
 import Providers from "./providers";
 
 const font = Geist({
   subsets: ["latin"],
   variable: "--font-sans",
+  display: "swap",
 });
 
-// ✅ FIXED: move viewport here
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   themeColor: "#1b6ca8",
 };
 
-// ✅ CLEAN METADATA
 export const metadata: Metadata = {
+  metadataBase: new URL("https://hardvanta.com"),
+
   title: {
     default: "Hardvanta",
     template: "%s | Hardvanta",
@@ -37,14 +40,13 @@ export const metadata: Metadata = {
     "Hardvanta",
   ],
 
-  metadataBase: new URL("https://hardvanta.com"),
-
   openGraph: {
     title: "Hardvanta",
     description:
       "Industrial electronics marketplace for engineers and innovators.",
     url: "https://hardvanta.com",
     siteName: "Hardvanta",
+    type: "website",
     images: [
       {
         url: "/logo.png",
@@ -53,7 +55,6 @@ export const metadata: Metadata = {
         alt: "Hardvanta Logo",
       },
     ],
-    type: "website",
   },
 
   twitter: {
@@ -71,15 +72,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+type RootLayoutProps = {
+  children: ReactNode;
+};
+
+export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" className={`${font.variable} scroll-smooth`}>
       <body className="bg-[#f8fafc] text-gray-900 antialiased">
-        {/* ✅ Razorpay Script (CORRECT WAY) */}
         <Script
           src="https://checkout.razorpay.com/v1/checkout.js"
           strategy="beforeInteractive"

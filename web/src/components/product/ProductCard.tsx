@@ -4,8 +4,8 @@ import { useState } from "react";
 import Image from "next/image";
 import { Eye, ShoppingCart, Heart, Star } from "lucide-react";
 
-// ✅ Strong typing (scalable)
-type Product = {
+// ✅ Strong scalable typing
+export type Product = {
   id: string;
   name: string;
   price: number;
@@ -16,47 +16,50 @@ type Product = {
   inStock?: boolean;
 };
 
+// ✅ API Layer (separation of concerns)
+async function addToCartAPI(productId: string) {
+  const res = await fetch("/api/cart", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ productId, quantity: 1 }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok || !data.success) {
+    throw new Error(data?.message || "Failed to add to cart");
+  }
+
+  return data;
+}
+
 export default function ProductCard({ product }: { product: Product }) {
   const [loading, setLoading] = useState(false);
 
   const discountPrice = product.price + 200;
 
-  async function handleAddToCart(e: React.MouseEvent) {
+  const handleAddToCart = async (e: React.MouseEvent) => {
     e.stopPropagation();
-
-    if (loading) return;
+    if (loading || !product.inStock) return;
 
     setLoading(true);
-
     try {
-      const res = await fetch("/api/cart", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          productId: product.id,
-          quantity: 1,
-        }),
-      });
+      await addToCartAPI(product.id);
 
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data?.message || "Failed to add to cart");
-      }
-
-      // Replace with toast later
+      // TODO: Replace with toast system (react-hot-toast / sonner)
       console.log("✅ Added to cart");
     } catch (error) {
-      console.error(error);
+      console.error("❌ Cart Error:", error);
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="group relative bg-white rounded-2xl border border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer">
+    <div
+      role="button"
+      className="group relative bg-white rounded-2xl border border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden"
+    >
       {/* IMAGE */}
       <div className="relative h-48 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
         <Image
@@ -64,7 +67,6 @@ export default function ProductCard({ product }: { product: Product }) {
           alt={product.name}
           width={160}
           height={160}
-          priority={false}
           className="object-contain transition-transform duration-500 group-hover:scale-110"
         />
 
@@ -87,12 +89,12 @@ export default function ProductCard({ product }: { product: Product }) {
       {/* CONTENT */}
       <div className="p-4 space-y-2">
         {/* NAME */}
-        <h2 className="text-sm font-semibold text-gray-800 line-clamp-2 leading-snug">
+        <h2 className="text-sm font-semibold text-gray-800 line-clamp-2">
           {product.name}
         </h2>
 
         {/* CATEGORY */}
-        <p className="text-xs text-gray-500">{product.category || "General"}</p>
+        <p className="text-xs text-gray-500">{product.category ?? "General"}</p>
 
         {/* RATING */}
         <div className="flex items-center gap-1 text-yellow-500 text-xs">
@@ -124,6 +126,7 @@ export default function ProductCard({ product }: { product: Product }) {
         <button
           onClick={handleAddToCart}
           disabled={loading || !product.inStock}
+          aria-disabled={loading || !product.inStock}
           className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-r from-[#0f4c81] via-[#1b6ca8] to-[#3ccf91] text-white hover:shadow-lg hover:scale-[1.03] active:scale-[0.97] transition disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <ShoppingCart size={16} />

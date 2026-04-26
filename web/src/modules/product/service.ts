@@ -1,43 +1,62 @@
-import { products } from "./model";
+import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 
 // ================= TYPES =================
-export type Product = {
-  id: string;
-  name: string;
-  price: number;
-  category: string;
-  stock: number;
-  sold: number; // ✅ FIXED (no optional)
-};
+type Product = Prisma.ProductGetPayload<{}>;
 
-type ServiceResponse<T = any> =
+type ServiceResponse<T> =
   | { success: true; data: T; message?: string }
   | { success: false; message: string };
 
 // ================= GET ALL =================
-export function getAllProducts(): Product[] {
-  return products.map((p) => ({
-    ...p,
-    sold: p.sold ?? 0, // ✅ ensure number
-  }));
+export async function getAllProducts(): Promise<Product[]> {
+  return db.product.findMany({
+    orderBy: { createdAt: "desc" },
+  });
 }
 
-// ================= GET (ASYNC READY) =================
+// ================= GET FILTERED =================
+export async function getFilteredProducts(query: {
+  search?: string;
+  category?: string;
+}): Promise<Product[]> {
+  const { search, category } = query;
+
+  const where: Prisma.ProductWhereInput = {
+    AND: [
+      search
+        ? {
+            OR: [
+              { name: { contains: search, mode: "insensitive" } },
+              { category: { contains: search, mode: "insensitive" } },
+            ],
+          }
+        : {},
+      category ? { category } : {},
+    ],
+  };
+
+  return db.product.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+// ================= GET PRODUCTS =================
 export async function getProducts(): Promise<ServiceResponse<Product[]>> {
   try {
+    const data = await getAllProducts();
+
     return {
       success: true,
-      data: getAllProducts(),
+      data,
     };
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to fetch products";
-
-    console.error("🔥 getProducts Error:", message);
+    console.error("🔥 getProducts Error:", error);
 
     return {
       success: false,
-      message,
+      message: "Failed to fetch products",
     };
   }
 }
@@ -46,37 +65,37 @@ export async function getProducts(): Promise<ServiceResponse<Product[]>> {
 export async function getProductById(id: string): Promise<Product> {
   if (!id) throw new Error("Product ID is required");
 
-  const product = products.find((p) => p.id === id);
+  const product = await db.product.findUnique({
+    where: { id },
+  });
 
   if (!product) {
-    throw new Error(`Product not found: ${id}`);
+    throw new Error("Product not found");
   }
 
-  return {
-    ...product,
-    sold: product.sold ?? 0, // ✅ ensure safe
-  };
+  return product;
 }
 
-// ================= SAVE PRODUCT =================
-export async function saveProduct(
-  updatedProduct: Product
+// ================= UPDATE PRODUCT =================
+export async function updateProduct(
+  id: string,
+  data: Partial<Prisma.ProductUpdateInput>
 ): Promise<Product> {
-  const index = products.findIndex((p) => p.id === updatedProduct.id);
+  if (!id) throw new Error("Product ID is required");
 
-  if (index === -1) {
-    throw new Error("Product not found while saving");
-  }
+  return db.product.update({
+    where: { id },
+    data,
+  });
+}
 
-  // ✅ immutable + safe
-  const newProduct: Product = {
-    ...updatedProduct,
-    sold: updatedProduct.sold ?? 0,
-  };
+// ================= DELETE PRODUCT =================
+export async function deleteProduct(id: string): Promise<Product> {
+  if (!id) throw new Error("Product ID is required");
 
-  products[index] = newProduct;
-
-  return newProduct;
+  return db.product.delete({
+    where: { id },
+  });
 }
 
 // ================= UPDATE STOCK =================
@@ -85,41 +104,31 @@ export async function updateProductStock(
   qty: number
 ): Promise<ServiceResponse<Product>> {
   try {
-    // ✅ validation
     if (!id) throw new Error("Product ID is required");
     if (qty <= 0) throw new Error("Quantity must be greater than 0");
 
-    const product = await getProductById(id);
-
-    if (product.stock < qty) {
-      throw new Error(
-        `Not enough stock for ${product.name} (Available: ${product.stock})`
-      );
-    }
-
-    // ✅ update logic
-    const updatedProduct: Product = {
-      ...product,
-      stock: product.stock - qty,
-      sold: product.sold + qty, // ✅ safe now
-    };
-
-    const savedProduct = await saveProduct(updatedProduct);
+    // 🔒 Atomic safe update (no race condition)
+    const updated = await db.product.update({
+      where: {
+        id,
+      },
+      data: {
+        stock: { decrement: qty },
+        sold: { increment: qty },
+      },
+    });
 
     return {
       success: true,
-      data: savedProduct,
+      data: updated,
       message: "Stock updated successfully",
     };
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Stock update failed";
-
-    console.error("🔥 updateProductStock Error:", message);
+    console.error("🔥 updateProductStock Error:", error);
 
     return {
       success: false,
-      message,
+      message: "Stock update failed",
     };
   }
 }

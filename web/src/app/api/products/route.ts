@@ -1,127 +1,146 @@
-import { esClient } from "@/lib/elasticsearch";
-import { authorize, getUser } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { getESClient } from "@/lib/elasticsearch";
+import { getUser, authorize } from "@/lib/auth";
 import { ROLES } from "@/lib/roles";
+import { z } from "zod";
+import { db } from "@/lib/db";
 
-// ================= TYPES =================
-type Product = {
-  id: number;
-  name: string;
-  brand: string;
-  price: number;
-  category: string;
-  image: string;
-  stock: number;
-  sold: number;
-  createdBy?: string;
-};
+// ================= SCHEMA =================
+const productSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  brand: z.string().min(1, "Brand is required"),
+  category: z.string().min(1, "Category is required"),
+  price: z.number().positive("Price must be positive"),
+  image: z.string().optional(),
+  stock: z.number().optional(),
+});
 
 // ================= CONSTANTS =================
-const DEFAULT_LIMIT = 8;
+const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 50;
 
 // ================= HELPERS =================
-function getTotal(total: number | { value: number } | undefined): number {
-  return typeof total === "number" ? total : total?.value ?? 0;
+function getPagination(params: URLSearchParams) {
+  const page = Math.max(1, Number(params.get("page")) || 1);
+  const limit = Math.min(
+    MAX_LIMIT,
+    Math.max(1, Number(params.get("limit")) || DEFAULT_LIMIT)
+  );
+
+  return {
+    page,
+    limit,
+    from: (page - 1) * limit,
+  };
 }
 
-function parseNumber(value: string | null): number | undefined {
-  if (!value) return undefined;
-  const num = Number(value);
-  return Number.isNaN(num) ? undefined : num;
-}
-
-function buildFilters({
-  category,
-  minPrice,
-  maxPrice,
-}: {
-  category?: string;
-  minPrice?: number;
-  maxPrice?: number;
-}) {
-  const filters: any[] = [];
-
-  if (category) {
-    filters.push({ term: { category } });
-  }
-
-  if (minPrice !== undefined || maxPrice !== undefined) {
-    filters.push({
-      range: {
-        price: {
-          ...(minPrice !== undefined && { gte: minPrice }),
-          ...(maxPrice !== undefined && { lte: maxPrice }),
-        },
-      },
-    });
-  }
-
-  return filters;
+function parseNumber(val: string | null) {
+  if (!val) return undefined;
+  const num = Number(val);
+  return isNaN(num) ? undefined : num;
 }
 
 // ================= GET PRODUCTS =================
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
 
-    const query = searchParams.get("search")?.trim() || "";
+    const query = searchParams.get("search") || "";
     const category = searchParams.get("category") || undefined;
     const minPrice = parseNumber(searchParams.get("minPrice"));
     const maxPrice = parseNumber(searchParams.get("maxPrice"));
 
-    const page = Math.max(1, Number(searchParams.get("page")) || 1);
-    const limit = Math.min(
-      MAX_LIMIT,
-      Math.max(1, Number(searchParams.get("limit")) || DEFAULT_LIMIT)
-    );
+    const { page, limit, from } = getPagination(searchParams);
 
-    const from = (page - 1) * limit;
+    const esClient = getESClient();
 
-    const filters = buildFilters({ category, minPrice, maxPrice });
+    // 🔥 ELASTIC SEARCH
+    if (esClient) {
+      const filters: any[] = [];
 
-    const esQuery = {
-      bool: {
-        must: query
-          ? [
-              {
-                multi_match: {
-                  query,
-                  type: "bool_prefix",
-                  fields: [
-                    "name",
-                    "name._2gram",
-                    "name._3gram",
-                    "brand",
-                    "category",
-                  ],
-                },
-              },
-            ]
-          : [],
-        filter: filters,
-      },
-    };
+      if (category) filters.push({ term: { category } });
 
-    const result = await esClient.search({
-      index: "products",
-      from,
-      size: limit,
-      query: esQuery as any, // ✅ FIX (TypeScript issue solved)
-      sort: [
-        {
-          _score: {
-            order: "desc",
+      if (minPrice || maxPrice) {
+        filters.push({
+          range: {
+            price: {
+              ...(minPrice && { gte: minPrice }),
+              ...(maxPrice && { lte: maxPrice }),
+            },
+          },
+        });
+      }
+
+      const result = await esClient.search({
+        index: "products",
+        from,
+        size: limit,
+        query: {
+          bool: {
+            must: query
+              ? [
+                  {
+                    multi_match: {
+                      query,
+                      type: "bool_prefix",
+                      fields: ["name", "brand", "category"],
+                    },
+                  },
+                ]
+              : [],
+            filter: filters,
+          },
+        } as any,
+      });
+
+      const products =
+        result.hits?.hits?.map((hit: any) => hit._source) ?? [];
+
+      const total =
+        typeof result.hits.total === "number"
+          ? result.hits.total
+          : result.hits.total?.value ?? 0;
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          products,
+          pagination: {
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
           },
         },
-      ],
+      });
+    }
+
+    // 🧠 FALLBACK DB
+    const products = await db.product.findMany({
+      skip: from,
+      take: limit,
+      where: {
+        ...(category && { category }),
+        ...(query && {
+          OR: [
+            { name: { contains: query, mode: "insensitive" } },
+            { category: { contains: query, mode: "insensitive" } },
+          ],
+        }),
+        ...(minPrice || maxPrice
+          ? {
+              price: {
+                ...(minPrice && { gte: minPrice }),
+                ...(maxPrice && { lte: maxPrice }),
+              },
+            }
+          : {}),
+      },
     });
 
-    const products: Product[] =
-      result.hits?.hits?.map((hit: any) => hit._source) ?? [];
+    const total = await db.product.count();
 
-    const total = getTotal(result.hits?.total);
-
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: {
         products,
@@ -130,15 +149,14 @@ export async function GET(req: Request) {
           page,
           limit,
           totalPages: Math.ceil(total / limit),
-          hasMore: from + limit < total,
         },
       },
     });
 
-  } catch (error: any) {
-    console.error("🔥 GET Error:", error);
+  } catch (err) {
+    console.error("GET_PRODUCTS_ERROR", err);
 
-    return Response.json(
+    return NextResponse.json(
       { success: false, message: "Failed to fetch products" },
       { status: 500 }
     );
@@ -146,54 +164,64 @@ export async function GET(req: Request) {
 }
 
 // ================= CREATE PRODUCT =================
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const user = await getUser();
+    const authError = authorize(user, [ROLES.ADMIN]);
 
-    authorize(user, [ROLES.ADMIN, ROLES.MEMBER]);
+    if (authError) return authError;
 
     const body = await req.json();
+    const parsed = productSchema.safeParse(body);
 
-    if (!body.name || !body.price || !body.category || !body.brand) {
-      return Response.json(
-        { success: false, message: "Missing required fields" },
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: parsed.error.issues[0]?.message || "Invalid data",
+        },
         { status: 400 }
       );
     }
 
-    const product: Product = {
-      id: Date.now(),
-      name: body.name.trim(),
-      brand: body.brand.trim(),
-      category: body.category,
-      image: body.image || "",
-      price: Number(body.price),
-      stock: Number(body.stock ?? 0),
+    const product = {
+      id: crypto.randomUUID(),
+      ...parsed.data,
       sold: 0,
       createdBy: user.id,
+      stock: parsed.data.stock ?? 0, // ✅ FINAL FIX
     };
 
-    await esClient.index({
-      index: "products",
-      id: String(product.id),
-      document: product,
-      refresh: false,
+    // 💾 SAVE DB
+    await db.product.create({
+      data: product,
     });
 
-    return Response.json({
+    // 🔎 INDEX ELASTIC
+    const esClient = getESClient();
+    if (esClient) {
+      await esClient.index({
+        index: "products",
+        id: product.id,
+        document: product,
+        refresh: true,
+      });
+    }
+
+    return NextResponse.json({
       success: true,
       data: product,
     });
 
-  } catch (error: any) {
-    console.error("🔥 POST Error:", error);
+  } catch (err: any) {
+    console.error("CREATE_PRODUCT_ERROR", err);
 
-    return Response.json(
+    return NextResponse.json(
       {
         success: false,
-        message: error.message || "Failed to create product",
+        message: err.message || "Failed to create product",
       },
-      { status: error.status || 500 }
+      { status: 500 }
     );
   }
 }

@@ -1,35 +1,50 @@
-import { NextRequest } from "next/server";
-import { getUser } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db"; // ✅ FIXED
+import { getUser, authorize } from "@/lib/auth";
 import { ROLES } from "@/lib/roles";
+import { z } from "zod";
+import { OrderStatus } from "@prisma/client";
+
+// ================= SCHEMA =================
+const updateSchema = z.object({
+  id: z.string(),
+  status: z.enum(["PLACED", "SHIPPED", "DELIVERED"]),
+});
+
+// ================= AUTH =================
+async function requireAdmin() {
+  const user = await getUser();
+  const error = authorize(user, [ROLES.ADMIN]);
+
+  if (error) throw error;
+  return user;
+}
 
 // ================= GET ORDERS =================
 export async function GET(req: NextRequest) {
   try {
-    // ✅ AUTH
-    const user = await getUser();
+    await requireAdmin();
 
-    if (!user || user.role !== ROLES.ADMIN) {
-      return Response.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    // ✅ QUERY PARAMS
     const { searchParams } = new URL(req.url);
 
-    const page = Number(searchParams.get("page")) || 1;
-    const limit = Number(searchParams.get("limit")) || 10;
+    const page = Math.max(1, Number(searchParams.get("page")) || 1);
+    const limit = Math.min(
+      50,
+      Math.max(1, Number(searchParams.get("limit")) || 10)
+    );
 
     const skip = (page - 1) * limit;
 
-    // ✅ MOCK DATA (no DB yet)
     const [orders, total] = await Promise.all([
-      getAllOrders({ skip, limit }),
-      getOrdersCount(),
+      db.order.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+      }),
+      db.order.count(),
     ]);
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: orders,
       meta: {
@@ -41,25 +56,50 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (err: any) {
-    console.error("Orders API Error:", err);
+    console.error("GET_ORDERS_ERROR:", err);
 
-    return Response.json(
-      { success: false, message: "Failed to fetch orders" },
-      { status: 500 }
+    return NextResponse.json(
+      { success: false, message: err.message || "Unauthorized" },
+      { status: 401 }
     );
   }
 }
 
-// ================= MOCK HELPERS =================
-async function getAllOrders({ skip, limit }: any) {
-  return Array.from({ length: limit }, (_, i) => ({
-    orderId: `order_${skip + i + 1}`,
-    userId: "user_1",
-    totalAmount: 999,
-    status: "completed",
-  }));
-}
+// ================= UPDATE ORDER =================
+export async function PATCH(req: NextRequest) {
+  try {
+    await requireAdmin();
 
-async function getOrdersCount() {
-  return 100; // mock total
+    const body = await req.json();
+    const parsed = updateSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, message: "Invalid request" },
+        { status: 400 }
+      );
+    }
+
+    const { id, status } = parsed.data;
+
+    const updated = await db.order.update({
+      where: { id },
+      data: {
+        status: status as OrderStatus, // ✅ Prisma enum match
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: updated,
+    });
+
+  } catch (err: any) {
+    console.error("UPDATE_ORDER_ERROR:", err);
+
+    return NextResponse.json(
+      { success: false, message: err.message || "Update failed" },
+      { status: 500 }
+    );
+  }
 }
