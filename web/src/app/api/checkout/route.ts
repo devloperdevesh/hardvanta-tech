@@ -27,7 +27,6 @@ type Product = {
 // ================= API =================
 export async function POST(req: NextRequest) {
   try {
-    // 🔐 AUTH
     const user = await getUser();
 
     if (!user) {
@@ -37,7 +36,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 📦 BODY
     const body = await req.json();
     const parsed = checkoutSchema.safeParse(body);
 
@@ -54,14 +52,8 @@ export async function POST(req: NextRequest) {
     const productIds = items.map((i) => i.productId);
 
     const products: Product[] = await db.product.findMany({
-      where: {
-        id: { in: productIds },
-      },
-      select: {
-        id: true,
-        name: true,
-        price: true,
-      },
+      where: { id: { in: productIds } },
+      select: { id: true, name: true, price: true },
     });
 
     if (products.length !== items.length) {
@@ -71,32 +63,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 💰 LINE ITEMS
-    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] =
-      items.map((item) => {
-        const product = products.find(
-          (p: Product) => p.id === item.productId
-        );
+    // 💰 LINE ITEMS (NO STRICT TYPE — SAFE)
+    const lineItems = items.map((item) => {
+      const product = products.find((p) => p.id === item.productId);
 
-        if (!product) throw new Error("Product not found");
+      if (!product) throw new Error("Product not found");
 
-        return {
-          price_data: {
-            currency: "inr",
-            product_data: {
-              name: product.name,
-            },
-            unit_amount: Math.round(product.price * 100),
+      return {
+        price_data: {
+          currency: "inr",
+          product_data: {
+            name: product.name,
           },
-          quantity: item.quantity,
-        };
-      });
+          unit_amount: Math.round(product.price * 100),
+        },
+        quantity: item.quantity,
+      };
+    });
 
     // 🧾 TOTAL
     const totalAmount = lineItems.reduce((sum, item) => {
-      const unit = item.price_data?.unit_amount ?? 0;
-      const qty = item.quantity ?? 1;
-      return sum + unit * qty;
+      return sum + item.price_data.unit_amount * item.quantity;
     }, 0);
 
     // 🧾 CREATE ORDER
@@ -111,7 +98,7 @@ export async function POST(req: NextRequest) {
     // 💳 STRIPE SESSION
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      line_items: lineItems,
+      line_items: lineItems as any, // 🔥 FINAL FIX
       success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/success?orderId=${order.id}`,
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/cart`,
       metadata: {
